@@ -411,8 +411,14 @@ class TGAN(torch.nn.Module):
         self.merge_layer_list = torch.nn.ModuleList([MergeLayer(self.feat_dim, self.feat_dim, self.feat_dim, self.feat_dim) for _ in range(num_layers)])
         self.att_affine_list = torch.nn.ModuleList([MergeLayer(self.feat_dim, 0, self.feat_dim // 2, 1) for _ in range(num_layers)])
 
+        #self.output = MergeLayer(self.feat_dim, 0, self.feat_dim // 2, 1)
+        #self.layer_weight = nn.Parameter(torch.ones(num_layers).float())
+        
+        # 在module.py中的TGAN类中修改输出层
         self.output = MergeLayer(self.feat_dim, 0, self.feat_dim // 2, 1)
-        self.layer_weight = nn.Parameter(torch.ones(num_layers).float())
+        self.layer_weight = nn.Parameter(torch.ones(2).float())  # 改为2而不是num_layers，因为src_list长度为2
+        # 添加一个激活函数，确保输出是正值
+        self.final_activation = nn.ReLU()  # 或者使用 Softplus 等保证输出为正
         
 
         nn.init.xavier_normal_(self.node_embed[0].weight)
@@ -520,16 +526,21 @@ class TGAN(torch.nn.Module):
             att_embed = torch.sum(embed * att_score, dim=0)
             embed_list.append(att_embed)
         embed = torch.stack(embed_list, dim=0)
+        
         weighted_embed = torch.sum(embed * self.layer_weight.view(-1, 1), dim=0, keepdim=True)
+        #weighted_embed = torch.sum(embed * self.layer_weight.view(-1, 1), dim=0, keepdim=True)
         
         # embed = self.merge_layer_list[0](src_embed, target_embed)
         # att_score = F.softmax(self.att_affine_list[0](embed, None), dim=0)
         # weighted_embed = torch.sum(embed * att_score, dim=0)
 
         
-        g_score = self.output(weighted_embed, None)
+        #g_score = self.output(weighted_embed, None)
 
         #g_score = torch.clamp(g_score, min=0)
+        
+        # 然后在forward方法最后添加
+        g_score = self.final_activation(self.output(weighted_embed, None))
         return g_score, att
 
     def tem_conv(self, feat_l, cas_l, src_idx_l, cut_time_l, e_l, curr_layers, num_neighbors=20):
