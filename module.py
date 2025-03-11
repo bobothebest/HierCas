@@ -1,3 +1,22 @@
+'''
+module.py 定义了多个神经网络模块，构建HierCas模型的核心组件。
+
+基础模块：
+MergeLayer：用于在不同层次或不同来源的信息融合。
+ScaledDotProductAttention 和 MultiHeadAttention：实现多头自注意力机制，捕捉不同子空间的关联信息。
+时间与位置嵌入：
+TimeEncode：基于相对时间间隔的嵌入，考虑时间衰减效果。
+PosEncode 和 EmptyEncode：分别实现位置嵌入和空嵌入，用于不同的时间信息编码方式。
+聚合与池化模块：
+LSTMPool：使用LSTM进行序列信息聚合。
+MeanPool：通过均值池化进行特征聚合。
+AttnModel：基于注意力机制的聚合模型，结合节点特征和边特征进行信息融合。
+ConvPool 和 global_attention：实现卷积池化和全局注意力池化，用于图级特征的提取。
+HierCas模型：
+初始化：包括节点和边的嵌入层、时间编码器、聚合层和输出层。
+前向传播：通过多层图注意力网络进行消息传递和特征提取，最终通过层级池化模块聚合多层特征，输出最终的流行度预测值。
+优化器配置：分离需要进行weight decay的参数和不需要的参数，配置AdamW优化器。
+'''
 import logging
 
 import numpy as np
@@ -21,6 +40,13 @@ class MergeLayer(torch.nn.Module):
         if x2 == None:
             x = x1
         else:
+            #print(f"x1 shape: {x1.shape}, x2 shape: {x2.shape}")
+            if x1.dim() == 1:  # 如果 x1 是 1D 张量
+                x1 = x1.unsqueeze(0)  # 增加一个 batch 维度，变成 [1, 192]
+            if x2.dim() == 1:  # 如果 x2 是 1D 张量（理论上不应该发生，但可以加个保险）
+                x2 = x2.unsqueeze(0)  # 增加一个 batch 维度，变成 [1, 64]
+
+            # 确保维度一致后再进行拼接
             x = torch.cat([x1, x2], dim=-1)
         #x = self.layer_norm(x)
         h = self.act(self.dropout(self.fc1(x)))
@@ -503,7 +529,7 @@ class TGAN(torch.nn.Module):
         
         g_score = self.output(weighted_embed, None)
 
-        g_score = torch.clamp(g_score, min=0)
+        #g_score = torch.clamp(g_score, min=0)
         return g_score, att
 
     def tem_conv(self, feat_l, cas_l, src_idx_l, cut_time_l, e_l, curr_layers, num_neighbors=20):

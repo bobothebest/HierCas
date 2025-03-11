@@ -1,3 +1,11 @@
+'''
+graph.py 包含了 NeighborFinder 类，用于构建和查询图的邻居信息。
+
+邻接列表初始化：将原始的邻接列表（adj_list）转换为多个数组（cas_l, node_idx_l, node_ts_l, edge_idx_l, off_set_l），便于后续的高效查询。
+时间约束的邻居查找：find_before 方法在给定时间截断点（cut_time）之前，找到特定节点（src_idx）在给定CAS ID（cas_id）下的邻居节点，确保只考虑时间上发生在截断点之前的传播行为。
+获取时序邻居：get_temporal_neighbor 方法批量处理多个查询，获取每个源节点在指定时间之前的邻居信息，并根据是否进行均匀采样（uniform）选择邻居节点。
+k-hop邻居采样：find_k_hop 方法通过迭代调用 get_temporal_neighbor，逐层获取k-hop邻居，用于多层图神经网络的输入。
+'''
 import numpy as np
 import torch
 
@@ -107,7 +115,7 @@ class NeighborFinder:
         out_ngh_eidx_batch = np.zeros((len(src_idx_l), num_neighbors)).astype(np.int32)
         for i, (cas_id, src_idx, cut_time) in enumerate(zip(cas_l, src_idx_l, cut_time_l)):
             ngh_idx, ngh_eidx, ngh_ts = self.find_before(cas_id, src_idx, cut_time)
-            print(len(ngh_idx))
+            #print(len(ngh_idx))
             if len(ngh_idx) > 0:
                 if self.uniform:
                     sampled_idx = np.random.randint(0, len(ngh_idx), num_neighbors)

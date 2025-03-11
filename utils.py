@@ -1,3 +1,11 @@
+'''
+utils.py 提供了一些辅助函数和类，增强实验的灵活性和可重复性。
+
+早停监控：EarlyStopMonitor 类用于在验证集性能不再提升时提前终止训练，防止过拟合。
+随机边采样：RandEdgeSampler 类用于随机采样边，生成负样本或进行数据增强。
+自定义图布局：custom_layout 函数用于可视化图结构，帮助理解图模型的学习过程。
+'''
+
 import numpy as np
 
 def shuffle_within_group(group):
